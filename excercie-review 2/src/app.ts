@@ -1,5 +1,10 @@
-import { fetchUsers, fetchUserById } from "./fetchData";
-import { User } from "./interfaces";
+import {
+  fetchUsers,
+  fetchUserById,
+  fetchTodosByUserId,
+  fetchCompletedTodos,
+} from "./fetchData";
+import { User, Todo } from "./interfaces";
 
 function createUserCard(user: User): string {
   return `
@@ -14,10 +19,26 @@ function createUserCard(user: User): string {
     </div>
   `;
 }
+
+function createTodoList(todos: Todo[]): string {
+  return todos
+    .map(
+      (todo) => `
+    <div class="todo-item">
+      <p><strong>${todo.title}</strong> - ${
+        todo.completed ? "Completed" : "Pending"
+      }</p>
+    </div>
+  `
+    )
+    .join("");
+}
+
 async function populateUserDropdown() {
   const userSelect = document.getElementById(
     "user-select"
   ) as HTMLSelectElement;
+  const userTodos = document.getElementById("user-todos") as HTMLSelectElement;
   try {
     const users = await fetchUsers();
     users.forEach((user) => {
@@ -25,6 +46,11 @@ async function populateUserDropdown() {
       option.value = user.id.toString();
       option.textContent = user.name;
       userSelect.appendChild(option);
+
+      const todoOption = document.createElement("option");
+      todoOption.value = user.id.toString();
+      todoOption.textContent = user.name;
+      userTodos.appendChild(todoOption);
     });
   } catch (error) {
     console.error("Error populating user dropdown:", error);
@@ -45,6 +71,34 @@ async function displayUserDetails(userId: number) {
   }
 }
 
+async function displayTodos(userId: number) {
+  const todosList = document.getElementById("todos-list") as HTMLDivElement;
+  try {
+    const todos = await fetchTodosByUserId(userId);
+    if (todosList) {
+      todosList.innerHTML = createTodoList(todos);
+    }
+  } catch (error) {
+    if (todosList) {
+      todosList.innerHTML = `<p>Error fetching todos</p>`;
+    }
+  }
+}
+
+async function displayCompletedTodos() {
+  const todosList = document.getElementById("todos-list") as HTMLDivElement;
+  try {
+    const todos = await fetchCompletedTodos();
+    if (todosList) {
+      todosList.innerHTML = createTodoList(todos);
+    }
+  } catch (error) {
+    if (todosList) {
+      todosList.innerHTML = `<p>Error fetching completed todos</p>`;
+    }
+  }
+}
+
 function setupEventListeners() {
   const userSelect = document.getElementById(
     "user-select"
@@ -55,6 +109,22 @@ function setupEventListeners() {
     if (userId) {
       displayUserDetails(userId);
     }
+  });
+
+  const userTodos = document.getElementById("user-todos") as HTMLSelectElement;
+  userTodos.addEventListener("change", (event) => {
+    const target = event.target as HTMLSelectElement;
+    const userId = Number(target.value);
+    if (userId) {
+      displayTodos(userId);
+    }
+  });
+
+  const filterCompletedTodosButton = document.getElementById(
+    "filter-completed-todos"
+  ) as HTMLButtonElement;
+  filterCompletedTodosButton.addEventListener("click", () => {
+    displayCompletedTodos();
   });
 }
 
